@@ -25,3 +25,11 @@ class PrepareBaseModelConfig:
     params_include_top: bool  # Whether to include the final dense layer of the base model
     params_weights: str  # Pre-trained weights to use for the base model
     params_classes: int  # The number of output classes for the final layer
+
+
+
+@dataclass(frozen= True)
+class PrepareCallbacksConfig:
+    root_dir:Path
+    tensorboard_root_log_dir:Path
+    checkpoint_model_filepath:Path
