@@ -2,6 +2,7 @@
 import os
 from CNNCDC import logger
 from CNNCDC.pipeline.stage_01_data_ingestion import DataIngestionTraningPipeline
+from CNNCDC.pipeline.stage_02_prepare_base_model import PrepareBaseModelPipline
 
 
 STAGE_NAME = "Data Ingestion Stage"
@@ -19,3 +20,15 @@ if __name__=='__main__':
         raise e
     
 
+STAGE_NAME = "Prepare Base Model"
+
+try:
+    logger.info(f"**********************")
+    logger.info(f">>>>>>>>>> stage {STAGE_NAME} Started <<<<<<<<<<<")
+    obj= PrepareBaseModelPipline()
+    obj.main()
+    logger.info(f">>>>>>>>>> stage {STAGE_NAME} Completed <<<<<<<<<<<\n\nX============X")
+
+except Exception as e:
+    logger.exception(e)
+    raise e

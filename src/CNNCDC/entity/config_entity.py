@@ -10,3 +10,18 @@ class DataIngestionConfig:
     source_URL: str  # URL to the source data file
     local_data_file: Path  # Local path to save the downloaded data file
     unzip_dir: Path  # Directory where the data will be unzipped
+
+
+@dataclass(frozen=True)
+class PrepareBaseModelConfig:
+    """
+    Configuration for preparing the base model (VGG16).
+    """
+    root_dir: Path  # Root directory for this pipeline stage
+    base_model_path: Path  # Path to the original VGG16 base model file
+    updated_base_model_path: Path  # Path to the updated base model with a custom top layer
+    params_image_size: list  # Dimensions of the input images
+    params_learning_rate: float  # Learning rate for the optimizer
+    params_include_top: bool  # Whether to include the final dense layer of the base model
+    params_weights: str  # Pre-trained weights to use for the base model
+    params_classes: int  # The number of output classes for the final layer
