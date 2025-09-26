@@ -43,7 +43,7 @@ class Training:
         dataflow_kwargs = dict(
             target_size = self.config.params_image_size[:-1],
             batch_size = self.config.params_batch_size,
-            interpolation = 'bilinar'
+            interpolation = 'bilinear'
         )
 
         valid_datagenerator = tf.keras.preprocessing.image.ImageDataGenerator(
