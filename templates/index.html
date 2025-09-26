@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chicken fecal diseases recognition</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Configure Tailwind to use Inter font -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'primary-blue': '#1e40af',
+                        'success-green': '#10b981',
+                        'danger-red': '#ef4444',
+                        'bg-light': '#f9fafb',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom styles for the spinner */
+        .spinner {
+            border-top-color: #3b82f6;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-bg-light min-h-screen flex items-center justify-center p-4 font-sans">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-xl shadow-2xl border border-gray-100">
+        
+        <!-- Header updated back to the original text "Chicken fecal diseases recognition" -->
+        <h1 class="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary-blue to-blue-500 mb-2 text-center">Chicken fecal diseases recognition</h1>
+        <div class="w-24 h-1 bg-primary-blue mx-auto rounded-full mb-8"></div>
+
+        <p class="text-sm text-gray-500 mb-6 text-center">Upload an image of the fecal sample for instant analysis.</p>
+
+        <!-- Image Input and Preview -->
+        <div class="space-y-4">
+            <label for="image-upload" class="block text-sm font-medium text-gray-700 text-left">Upload Image:</label>
+            <input type="file" id="image-upload" accept="image/*" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-blue/10 file:text-primary-blue hover:file:bg-primary-blue/20 cursor-pointer" onchange="previewImage()">
+            
+            <div class="flex justify-center items-center h-48 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 overflow-hidden">
+                <img id="image-preview" src="#" alt="Image Preview" class="object-contain max-h-full max-w-full rounded-md hidden">
+                <p id="preview-placeholder" class="text-gray-400">Image Preview</p>
+            </div>
+        </div>
+
+        <!-- Prediction Button -->
+        <button onclick="predictImage()" id="predict-button" disabled class="mt-8 w-full py-3 px-6 bg-primary-blue text-white font-bold rounded-lg shadow-md hover:bg-primary-blue/90 transition duration-150 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center">
+            Analyze Fecal Sample
+        </button>
+
+        <!-- Loading Indicator -->
+        <div id="loading-spinner" class="mt-6 flex justify-center hidden">
+            <div class="spinner h-8 w-8 rounded-full border-4 border-gray-200"></div>
+            <span class="ml-3 text-gray-600">Analyzing...</span>
+        </div>
+
+        <!-- Result Display -->
+        <div id="result" class="mt-6 p-4 rounded-lg font-semibold text-center text-lg hidden transition-all duration-300 ease-in-out">
+            <!-- Result text goes here -->
+        </div>
+
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('image-upload');
+        const imagePreview = document.getElementById('image-preview');
+        const previewPlaceholder = document.getElementById('preview-placeholder');
+        const resultDiv = document.getElementById('result');
+        const predictButton = document.getElementById('predict-button');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        let base64Image = null;
+
+        /**
+         * Converts the uploaded file to Base64 and updates the preview.
+         */
+        function previewImage() {
+            const file = imageUpload.files[0];
+            
+            // Reset UI state
+            resultDiv.classList.add('hidden');
+            resultDiv.textContent = '';
+            predictButton.disabled = true;
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    // Update preview
+                    imagePreview.src = e.target.result;
+                    imagePreview.classList.remove('hidden');
+                    previewPlaceholder.classList.add('hidden');
+                    
+                    // Store base64 data for API call (strip prefix)
+                    base64Image = e.target.result.split(',')[1];
+                    predictButton.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                // No file selected
+                imagePreview.classList.add('hidden');
+                previewPlaceholder.classList.remove('hidden');
+                base64Image = null;
+            }
+        }
+
+        /**
+         * Sends the base64 image data to the Flask /predict endpoint.
+         */
+        async function predictImage() {
+            if (!base64Image) return;
+
+            // Start UI feedback
+            predictButton.disabled = true;
+            loadingSpinner.classList.remove('hidden');
+            resultDiv.classList.add('hidden');
+            resultDiv.className = 'mt-6 p-4 rounded-lg font-semibold text-center text-lg'; // Reset classes
+
+            try {
+                // The fetch call goes to the Flask /predict endpoint
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ image: base64Image })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server returned status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // --- DEBUGGING STEP ---
+                console.log("Raw Prediction Response:", data);
+                // --- END DEBUGGING STEP ---
+
+                // Find label using common keys, default to 'Unknown'
+                const rawLabel = data.label || data.class || data.name || 'Unknown';
+                const label = rawLabel.trim(); // Trim spaces just in case
+                
+                // Find confidence using common keys (confidence, probability, score)
+                let confidence = data.confidence || data.probability || data.score;
+                
+                if (typeof confidence === 'number') {
+                    // If it's a number (0.0 to 1.0), format it as a percentage
+                    confidence = (confidence * 100).toFixed(2);
+                } else {
+                    // Otherwise, set to N/A
+                    confidence = 'N/A';
+                }
+                
+                // Determine styling based on the predicted label
+                let statusClass = '';
+                const lowerLabel = label.toLowerCase();
+
+                // CRITICAL FIX: Explicitly checking for known class names
+                if (lowerLabel === 'healthy') {
+                    statusClass = 'bg-success-green/20 text-success-green border border-success-green';
+                } else if (lowerLabel === 'coccidiosis') { 
+                    statusClass = 'bg-danger-red/20 text-danger-red border border-danger-red';
+                } else {
+                    // Default for 'Unknown' or any unexpected label
+                    statusClass = 'bg-gray-200 text-gray-700 border border-gray-400';
+                }
+
+                // Update result display
+                resultDiv.textContent = `Prediction: ${label} (Confidence: ${confidence}%)`;
+                resultDiv.classList.remove('hidden');
+                resultDiv.classList.add(...statusClass.split(' '));
+
+            } catch (error) {
+                console.error("Prediction failed:", error);
+                resultDiv.textContent = "Error: Could not reach the server or process prediction.";
+                resultDiv.classList.remove('hidden');
+                resultDiv.classList.add('bg-danger-red/20', 'text-danger-red', 'border', 'border-danger-red');
+            } finally {
+                // End UI feedback
+                loadingSpinner.classList.add('hidden');
+                predictButton.disabled = false;
+            }
+        }
+    </script>
+</body>
